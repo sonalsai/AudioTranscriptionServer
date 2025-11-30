@@ -77,8 +77,14 @@ wss.on("connection", (ws) => {
 });
 
 server.listen(config.port, () => {
-  console.log(`Server listening on http://localhost:${config.port}`);
-  console.log(`WebSocket server running on ws://localhost:${config.port}`);
+  console.log(
+    `Server listening on ${config.protocol}://${config.domain}:${config.port}`
+  );
+  console.log(
+    `WebSocket server running on ${
+      config.protocol === "https" ? "wss" : "ws"
+    }://${config.domain}:${config.port}`
+  );
 });
 
 module.exports = app;
