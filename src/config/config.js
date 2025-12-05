@@ -1,5 +1,5 @@
 require("dotenv").config();
-const logger = require("./logger");
+const logger = require("../utils/logger");
 
 const config = {
   port: process.env.PORT || 3000,
@@ -11,12 +11,14 @@ const config = {
 };
 
 if (!config.deepgramApiKey) {
-  logger.fatal({
-    event: "config_error",
-    missingVar: "DEEPGRAM_API_KEY",
-  }, "DEEPGRAM_API_KEY not found in .env");
+  logger.fatal(
+    {
+      event: "config_error",
+      missingVar: "DEEPGRAM_API_KEY",
+    },
+    "DEEPGRAM_API_KEY not found in .env"
+  );
   process.exit(1);
 }
 
 module.exports = config;
-

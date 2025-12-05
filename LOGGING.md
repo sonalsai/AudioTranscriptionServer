@@ -1,267 +1,287 @@
-# Logging Documentation
+# Logger Configuration Guide
 
-## Overview
+## 📝 Overview
 
-This server uses **Pino** for structured, high-performance logging. All logs are formatted with timestamps, log levels, and contextual information.
+The logger automatically configures itself based on the environment, providing optimal settings for both development and production.
 
-## Log Levels
+## 🔧 Configuration
 
-- **fatal**: System-critical errors that require immediate shutdown
-- **error**: Runtime errors that need attention
-- **warn**: Warning conditions (e.g., dropped messages, client not ready)
-- **info**: General informational messages (connections, disconnections, server start)
-- **debug**: Detailed debugging information (message forwarding, state changes)
-- **trace**: Very detailed tracing information
+### Environment Detection
 
-## Configuration
+The logger uses `NODE_ENV` to determine the environment:
 
-### Environment Variables
+```javascript
+// Development (default)
+NODE_ENV = development; // or not set
 
-Set the log level using the `LOG_LEVEL` environment variable in your `.env` file:
-
-```env
-LOG_LEVEL=info  # Options: fatal, error, warn, info, debug, trace
+// Production
+NODE_ENV = production;
 ```
 
-Default: `info`
+## 🎨 Development Mode
 
-## Log Categories
+**Features:**
 
-### 1. HTTP Request Logs
+- ✅ Pretty-printed, colorized output
+- ✅ Debug level logging (more verbose)
+- ✅ Human-readable timestamps
+- ✅ Easy to read in terminal
 
-Every HTTP request is automatically logged with:
+**Example Output:**
 
-- Request method and URL
-- Response status code
-- Response time
-- Request ID (for tracing)
+```
+[2025-12-05 19:55:00] INFO: Logger initialized
+    environment: "development"
+    logLevel: "debug"
+    prettyPrint: true
+```
+
+## 🚀 Production Mode
+
+**Features:**
+
+- ✅ JSON output (optimized for log aggregation tools)
+- ✅ Info level logging (less verbose)
+- ✅ Sensitive data redaction
+- ✅ Service metadata included
+- ✅ Better performance (no pretty printing overhead)
+
+**Example Output:**
+
+```json
+{
+  "level": "INFO",
+  "time": "2025-12-05T14:25:00.000Z",
+  "env": "production",
+  "service": "audio-transcription-server",
+  "msg": "Logger initialized"
+}
+```
+
+## 🔒 Security Features
+
+### Automatic Redaction
+
+The following sensitive fields are automatically redacted from logs:
+
+- `req.headers.authorization`
+- `req.headers.cookie`
+- `deepgramApiKey`
+- `*.password`
+- `*.token`
+- `*.apiKey`
+- `*.secret`
 
 **Example:**
 
-```json
-{
-  "level": "INFO",
-  "time": "2025-12-05T11:03:34.123Z",
-  "msg": "GET / completed",
-  "req": {
-    "method": "GET",
-    "url": "/"
-  },
-  "res": {
-    "statusCode": 200
-  },
-  "responseTime": 5
-}
+```javascript
+// This will be redacted
+logger.info({ apiKey: "secret123" }, "API call");
+
+// Output: { msg: "API call" } // apiKey removed
 ```
 
-### 2. WebSocket Connection Logs
+## 📊 Log Levels
 
-#### Client Connection
+### Available Levels (from most to least verbose):
 
-```json
-{
-  "level": "INFO",
-  "event": "client_connected",
-  "connectionId": 1,
-  "clientIp": "::1",
-  "totalConnections": 1,
-  "msg": "Client WebSocket connected"
-}
-```
+1. **trace** - Very detailed debugging
+2. **debug** - Debugging information
+3. **info** - General information (default in production)
+4. **warn** - Warning messages
+5. **error** - Error messages
+6. **fatal** - Fatal errors (application crash)
 
-#### Client Disconnection
-
-```json
-{
-  "level": "INFO",
-  "event": "client_disconnected",
-  "connectionId": 1,
-  "code": 1000,
-  "reason": "",
-  "totalConnections": 0,
-  "msg": "Client WebSocket disconnected"
-}
-```
-
-### 3. Deepgram Stream Lifecycle Logs
-
-#### Deepgram Connection Established
-
-```json
-{
-  "level": "INFO",
-  "event": "deepgram_connected",
-  "connectionId": 1,
-  "connectionTimeMs": 245,
-  "msg": "Connected to Deepgram WebSocket"
-}
-```
-
-#### Deepgram Message Received
-
-```json
-{
-  "level": "DEBUG",
-  "event": "deepgram_message_received",
-  "connectionId": 1,
-  "messageType": "Results",
-  "hasTranscript": true,
-  "msg": "Received message from Deepgram"
-}
-```
-
-#### Deepgram Connection Closed
-
-```json
-{
-  "level": "INFO",
-  "event": "deepgram_closed",
-  "connectionId": 1,
-  "code": 1000,
-  "reason": "Normal closure",
-  "msg": "Deepgram WebSocket connection closed"
-}
-```
-
-### 4. Error Logs
-
-#### Deepgram Error
-
-```json
-{
-  "level": "ERROR",
-  "event": "deepgram_error",
-  "connectionId": 1,
-  "error": "Connection timeout",
-  "code": "ETIMEDOUT",
-  "stack": "...",
-  "msg": "Deepgram WebSocket error occurred"
-}
-```
-
-#### Client WebSocket Error
-
-```json
-{
-  "level": "ERROR",
-  "event": "client_error",
-  "connectionId": 1,
-  "error": "Connection reset",
-  "msg": "Client WebSocket error occurred"
-}
-```
-
-#### Configuration Error
-
-```json
-{
-  "level": "FATAL",
-  "event": "config_error",
-  "missingVar": "DEEPGRAM_API_KEY",
-  "msg": "DEEPGRAM_API_KEY not found in .env"
-}
-```
-
-## Monitoring & Debugging
-
-### Connection Tracking
-
-Each WebSocket connection is assigned a unique `connectionId` that appears in all related logs. Use this to trace the lifecycle of a specific connection:
+### Setting Log Level
 
 ```bash
-# Filter logs for a specific connection
-npm run dev | grep "connectionId\":1"
+# Via environment variable
+LOG_LEVEL=debug npm start
+
+# Or in .env file
+LOG_LEVEL=debug
 ```
 
-### Performance Monitoring
+### Default Levels:
 
-- **connectionTimeMs**: Time taken to establish Deepgram connection
-- **bytesReceived**: Size of audio chunks being forwarded
-- **responseTime**: HTTP request duration
+- **Development:** `debug`
+- **Production:** `info`
 
-### Common Debug Scenarios
+## 💡 Usage Examples
 
-#### 1. Dropped Messages
-
-Look for logs with `event: "deepgram_not_ready"`:
-
-```bash
-npm run dev | grep "deepgram_not_ready"
-```
-
-#### 2. Connection Issues
-
-Monitor connection lifecycle:
-
-```bash
-npm run dev | grep -E "(client_connected|client_disconnected|deepgram_connected|deepgram_closed)"
-```
-
-#### 3. Errors Only
-
-```bash
-npm run dev | grep -E "(ERROR|FATAL)"
-```
-
-## Production Logging
-
-For production, you may want to:
-
-1. **Disable pretty printing** (for better performance and machine parsing)
-2. **Use JSON output** for log aggregation tools
-3. **Set appropriate log level** (info or warn)
-
-### Production Logger Configuration
-
-Update `src/logger.js` for production:
+### Basic Logging
 
 ```javascript
-const logger = pino({
-  level: process.env.LOG_LEVEL || "info",
-  // Remove transport for production (raw JSON output)
-  ...(process.env.NODE_ENV !== "production" && {
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: true,
-        translateTime: "SYS:standard",
-        ignore: "pid,hostname",
-      },
-    },
-  }),
-});
+const logger = require("./utils/logger");
+
+// Info level
+logger.info("Server started");
+
+// With structured data
+logger.info({ port: 3000 }, "Server listening");
+
+// Warning
+logger.warn({ connectionId: 123 }, "Connection timeout");
+
+// Error
+logger.error({ error: err.message }, "Failed to connect");
 ```
 
-## Log Aggregation
+### Event Logging
 
-Pino's JSON output works seamlessly with:
+```javascript
+// WebSocket events
+logger.info(
+  {
+    event: "client_connected",
+    connectionId: 1,
+    clientIp: "192.168.1.1",
+  },
+  "Client connected"
+);
 
-- **Elasticsearch + Kibana**
+// HTTP requests (handled by middleware)
+// Automatically logged with request/response details
+```
+
+### Error Logging
+
+```javascript
+try {
+  // Some operation
+} catch (err) {
+  logger.error(
+    {
+      event: "operation_failed",
+      error: err.message,
+      stack: err.stack,
+    },
+    "Operation failed"
+  );
+}
+```
+
+## 🎯 Best Practices
+
+### 1. Use Structured Logging
+
+**Good:**
+
+```javascript
+logger.info({ userId: 123, action: "login" }, "User logged in");
+```
+
+**Avoid:**
+
+```javascript
+logger.info("User 123 logged in");
+```
+
+### 2. Include Event Names
+
+```javascript
+logger.info({ event: "payment_processed", amount: 100 }, "Payment successful");
+```
+
+### 3. Use Appropriate Log Levels
+
+- `debug` - Development debugging only
+- `info` - Normal operations
+- `warn` - Potential issues
+- `error` - Errors that need attention
+- `fatal` - Critical failures
+
+### 4. Don't Log Sensitive Data
+
+The logger will redact known sensitive fields, but avoid logging:
+
+- Passwords
+- API keys
+- Tokens
+- Personal information
+- Credit card numbers
+
+## 🔄 Switching Environments
+
+### Development (Local)
+
+```bash
+npm run dev
+# or
+npm start
+```
+
+### Production
+
+```bash
+NODE_ENV=production npm start
+```
+
+## 📦 Logger Metadata
+
+Every log includes:
+
+```javascript
+{
+  "level": "INFO",           // Log level
+  "time": "ISO timestamp",   // When it happened
+  "env": "development",      // Environment
+  "service": "audio-transcription-server",  // Service name
+  "msg": "Log message",      // Your message
+  // ... your custom fields
+}
+```
+
+## 🛠️ Customization
+
+### Override Log Level
+
+```bash
+# More verbose (development)
+LOG_LEVEL=debug npm start
+
+# Less verbose (production)
+LOG_LEVEL=warn npm start
+
+# Silent (only errors)
+LOG_LEVEL=error npm start
+```
+
+### Force Production Mode
+
+```bash
+NODE_ENV=production npm start
+```
+
+### Force Development Mode
+
+```bash
+NODE_ENV=development npm start
+```
+
+## 📈 Log Aggregation (Production)
+
+The JSON output in production is optimized for log aggregation tools:
+
 - **Datadog**
-- **New Relic**
-- **CloudWatch Logs**
-- **Grafana Loki**
+- **Splunk**
+- **ELK Stack (Elasticsearch, Logstash, Kibana)**
+- **CloudWatch**
+- **Loggly**
 
 Simply pipe the output to your log aggregation service.
 
-## Best Practices
+## ✅ Summary
 
-1. **Always include event type**: Makes filtering easier
-2. **Use structured data**: Add context as JSON fields, not in the message
-3. **Include connection IDs**: Essential for debugging distributed systems
-4. **Log at appropriate levels**: Don't spam with debug logs in production
-5. **Include error stacks**: Critical for debugging failures
+| Feature          | Development    | Production |
+| ---------------- | -------------- | ---------- |
+| Format           | Pretty-printed | JSON       |
+| Colors           | ✅ Yes         | ❌ No      |
+| Default Level    | `debug`        | `info`     |
+| Redaction        | ✅ Yes         | ✅ Yes     |
+| Performance      | Standard       | Optimized  |
+| Service Metadata | ✅ Yes         | ✅ Yes     |
 
-## Troubleshooting
+---
 
-### No logs appearing?
-
-Check that `LOG_LEVEL` is set correctly. If set to `error`, you won't see `info` or `debug` logs.
-
-### Logs too verbose?
-
-Set `LOG_LEVEL=warn` or `LOG_LEVEL=error` in production.
-
-### Want to see audio data flow?
-
-Set `LOG_LEVEL=debug` to see every audio chunk being forwarded.
+**The logger is now unified and production-ready!** 🎉
