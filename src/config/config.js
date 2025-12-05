@@ -8,6 +8,13 @@ const config = {
   protocol: process.env.PROTOCOL || "http",
   deepgramApiKey: process.env.DEEPGRAM_API_KEY,
   deepgramUrl: `wss://api.deepgram.com/v1/listen?model=nova-3&language=en`,
+
+  // WebSocket configuration
+  ws: {
+    inactivityTimeout:
+      parseInt(process.env.WS_INACTIVITY_TIMEOUT) || 5 * 60 * 1000, // 5 minutes
+    heartbeatInterval: parseInt(process.env.WS_HEARTBEAT_INTERVAL) || 30 * 1000, // 30 seconds
+  },
 };
 
 if (!config.deepgramApiKey) {
